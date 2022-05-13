@@ -16,5 +16,5 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_144.jdk/Contents/Hom
 
 ## 3. Run
 ```
-java -jar build/libs/gpu-parser-0.1-SNAPSHOT.jar
+java -jar build/libs/gpu-parser-0.1.0.jar
 ```

@@ -1,5 +1,106 @@
-plugins {
-    id 'java'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply from: "$rootDir/gradle/ext/coding-format.gradle"
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+// Configure the maven repository deployment
+install {
+    repositories.mavenInstaller {
+        // Set the version
+        pom.version = project.version
+        // Set the group/namespace for the maven repository deployment.
+        pom.groupId = project.groupId
+        // Give the artifact a 'base name' (The version is added to the 'base name')
+        pom.artifactId = project.artifactId
+    }
+}
+
+buildscript {
+
+    repositories {
+        if (project.hasProperty('local')) mavenLocal()
+
+        mavenCentral()
+
+        maven { url 'http://repository.activeeon.com/content/groups/proactive/' }
+        maven { url "http://nexus.qmino.com/content/repositories/miredot" }
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+
+    dependencies {
+        classpath 'com.qmino:miredot-plugin:1.6.2'
+        classpath "com.diffplug.gradle.spotless:spotless:2.4.0"
+        classpath "org.ow2.proactive:coding-rules:1.0.0"
+        classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.2.1"
+    }
+
+    dependencies {
+        delete "gradle/ext"
+        ant.unjar src: configurations.classpath.find { it.name.startsWith("coding-rules") }, dest: 'gradle/ext'
+    }
+}
+
+allprojects {
+    apply plugin: 'maven'
+
+    group = project.groupId
+    version = project.version
+
+
+    rootProject.buildscript.repositories.each {
+        repositories.add(it)
+    }
+
+
+    // Upload the archives to the nexus repository. For execution, that needs to have
+    // the username and password set in the command line by -DnexusUsername=[username]
+    // and -DnexusPassword=[password]
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                // Set the version
+                pom.version = project.version
+                // Set the group/namespace for the maven repository deployment.
+                pom.groupId = project.groupId
+                // Give the artifact a 'base name' (The version is added to the 'base name')
+                pom.artifactId = project.artifactId
+
+                snapshotRepository(url: "http://repository.activeeon.com/content/repositories/snapshots/") {
+                    authentication(userName: "${System.getProperty('nexusUsername')}",
+                            password: "${System.getProperty('nexusPassword')}")
+                }
+                repository(url: "http://repository.activeeon.com/content/repositories/releases/") {
+                    authentication(userName: "${System.getProperty('nexusUsername')}",
+                            password: "${System.getProperty('nexusPassword')}")
+                }
+            }
+        }
+    }
+}
+
+ext.javaSubprojects = subprojects.findAll { new File(it.projectDir, "src").exists() }
+
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.3' //version required
+}
+
+configurations {
+    provided
+}
+
+sourceSets {
+    main {
+        main.compileClasspath += configurations.provided
+        test.compileClasspath += configurations.provided
+        test.runtimeClasspath += configurations.provided
+    }
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
 }
 
 jar {
@@ -8,20 +109,4 @@ jar {
                 'Main-Class': 'org.ow2.proactive.Main'
         )
     }
-}
-
-group 'org.ow2.proactive'
-version '0.1-SNAPSHOT'
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-}
-
-test {
-    useJUnitPlatform()
 }
