@@ -27,5 +27,6 @@ package org.ow2.proactive.gpuparser.model;
 
 import java.io.Serializable;
 
+
 public class GpuInfo implements Serializable {
 }
